@@ -107,6 +107,7 @@ addCol = do
 
 main :: IO ()
 main = do
+    hSetBuffering stdout NoBuffering
     let
         options = [
                 Option "Add Column" addCol
