@@ -1,5 +1,7 @@
 module Main where
 
+import System.IO
+
 data SQLPattern = AddColumn {
         addColTableName :: String
         ,addColName :: String
@@ -27,6 +29,11 @@ instance Show SQLPattern where
         
 data Option a = Option String (IO SQLPattern)
 
+putStrx :: String -> IO ()
+putStrx s = do
+    putStr s
+    hFlush stdout
+        
 generateSQL :: SQLPattern -> String
 generateSQL (AddColumn tabName colName typeName sub' nonNull') =
     let
@@ -66,33 +73,33 @@ ynStrToBool _ = False
 
 renCol :: IO SQLPattern
 renCol = do
-    putStr $ "table name: "
+    putStrx $ "table name: "
     p1 <- getLine :: IO String
         
-    putStr $ "old col name: "
+    putStrx $ "old col name: "
     p2 <- getLine :: IO String
         
-    putStr $ "new col name: "
+    putStrx $ "new col name: "
     p3 <- getLine :: IO String
 
     return $ RenameColumn p1 p2 p3
 
 addCol :: IO SQLPattern
 addCol = do
-    putStr $ "table name: "
+    putStrx $ "table name: "
     p1 <- getLine :: IO String
         
-    putStr $ "new col name: "
+    putStrx $ "new col name: "
     p2 <- getLine :: IO String
         
-    putStr $ "new col type: "
+    putStrx $ "new col type: "
     p3 <- getLine :: IO String
         
-    putStr $ "new col sub type: "
+    putStrx $ "new col sub type: "
     p4' <- getLine :: IO String
     let p4 = strToMaybeStr p4'
 
-    putStr $ "new col NonNull? (yY/nN): "
+    putStrx $ "new col NonNull? (yY/nN): "
     p5' <- getLine :: IO String
     let p5 = ynStrToBool p5'
         
