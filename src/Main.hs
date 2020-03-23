@@ -15,38 +15,55 @@ data SQLPattern = AddColumn {
         , renColOldColName :: String
         , renColNewColName :: String
     }
+        
+    | DropCons {
+        dpkTableName :: String
+        , dpkName :: String
+    }
+            
+    | CreateUniqueIndex {
+        cixName :: String
+        , cixTableName :: String
+        , cixCommaName :: String
+    }
+
+    | CreatePK {
+        pkTabName :: String
+        , pkName :: String
+        , pkCommaName :: String
+    }
 
 instance Show SQLPattern where
     show (AddColumn tabName colName typeName sub' nonNull') =
         let
             sub = maybe "" (\s -> "("++s++")") sub'
             nonNull = if nonNull' then " NON NULL" else ""
-        in concat ["ALTER TABLE [", tabName, "] [", colName, "] ", typeName, sub, nonNull, ";"]
+        in concat ["ALTER TABLE [", tabName, "] ADD [", colName, "] ", typeName, sub, nonNull, ";"]
 
     show (RenameColumn tabName oldColName newColName) =
-        -- EXECUTE sp_rename N'dbo.[t1].badfieldname', N'PrimaryEmail', 'COLUMN'
         concat ["EXECUTE sp_rename N'dbo.[", tabName, "].[", oldColName, "]', N'" ++ newColName  ++ "', 'COLUMN';" ]
-        
+
+    show (DropCons tabName conName) =
+        concat ["ALTER TABLE [", tabName, "] DROP CONSTRAINT [", conName,"];"]
+
+    show (CreateUniqueIndex ixName tabName colList) =
+        concat ["CREATE UNIQUE INDEX [", ixName, "] ON [", tabName, "] (", colList, ");"]
+
+    show (CreatePK tabName constraintName colList) =
+        concat ["ALTER TABLE [", tabName, "] ADD CONSTRAINT [", constraintName, "] PRIMARY KEY (", colList ,");"]
+
 data Option a = Option String (IO SQLPattern)
 
 putStrx :: String -> IO ()
 putStrx s = do
     putStr s
     hFlush stdout
-        
-generateSQL :: SQLPattern -> String
-generateSQL (AddColumn tabName colName typeName sub' nonNull') =
-    let
-        sub = maybe "" (\s -> "("++s++")") sub'
-        nonNull = if nonNull' then " NON NULL" else ""
-    in concat ["ALTER TABLE ", tabName, " ", colName, " ", typeName, sub, nonNull, ";"]
 
 printOptions :: [Option a] -> IO ()
 printOptions opts' = do
     let opts = zip [1..] opts'
     putStrLn "0) exit"
-    mapM_ (\(n, (Option s _)) -> putStrLn ( show n ++ ") " ++ s  )) opts
-
+    mapM_ (\(n, (Option s _)) -> putStrLn ( show n ++ ") " ++ s )) opts
 
 processOption :: [Option a] -> String -> IO () -> IO ()
 processOption opts opt cc =
@@ -105,6 +122,40 @@ addCol = do
         
     return $ AddColumn p1 p2 p3 p4 p5
 
+dropCons = do
+    putStrx $ "table name: "
+    p1 <- getLine :: IO String
+        
+    putStrx $ "constraint name: "
+    p2 <- getLine :: IO String
+        
+    return $ DropCons p1 p2
+
+createUIX = do
+    putStrx $ "IX name: "
+    p1 <- getLine :: IO String
+        
+    putStrx $ "table name: "
+    p2 <- getLine :: IO String
+        
+    putStrx $ "column list: "
+    p3 <- getLine :: IO String
+
+    return $ CreateUniqueIndex p1 p2 p3
+
+
+addPK = do        
+    putStrx $ "Table name: "
+    p1 <- getLine :: IO String
+        
+    putStrx $ "PK name: "
+    p2 <- getLine :: IO String
+        
+    putStrx $ "column list: "
+    p3 <- getLine :: IO String
+        
+    return $ CreatePK p1 p2 p3
+
 main :: IO ()
 main = do
     hSetBuffering stdout NoBuffering
@@ -112,6 +163,12 @@ main = do
         options = [
                 Option "Add Column" addCol
                 , Option "Rename Column" renCol
+                , Option "Drop PK" dropCons
+                , Option "Drop IX" dropCons
+                , Option "Create UNIQUE IX" createUIX
+                , Option "Add PK" addPK
+
+        
             ]
     printOptions options
     l <- getLine :: IO String
